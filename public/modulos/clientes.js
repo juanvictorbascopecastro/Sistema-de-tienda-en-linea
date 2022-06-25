@@ -1,0 +1,88 @@
+var clientes = (function(window, document){
+    var metodos = {
+        categoria: null,
+        list: [],
+        inicio: function(){
+            let this_ = this;
+            this.getClientes();
+        },
+        getClientes: function(){
+            let this_ = this;
+            var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+            var ajaxUrl = base_url+'/clientes/getData';
+            request.open("GET", ajaxUrl, true);
+            //request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            request.send();
+            request.onreadystatechange = function(){
+                if(request.readyState == 4 && request.status == 200){
+                    var objData = JSON.parse(request.responseText);
+                    if(objData){
+                        let html = '';
+                        let button = '';
+                        this_.list = objData;
+                        for(let i = 0; i < objData.length; i++){
+                            if(objData[i].estado == '1') button = `<button class="btn btn-sm btn-warning" user="${objData[i].idpersona}" onclick="clientes.activarUsuario(this)"><i class="fa fa-times"></i></button>`;
+                            else button = `<button class="btn btn-sm btn-success" user="${objData[i].idpersona}" onclick="clientes.activarUsuario(this)"><i class="fa fa-check"></i></button>`;
+                            html = html + `<tr class="rem1">
+                                            <td class="invert">${objData[i].nombre}</td>
+                                            <td class="invert">${objData[i].apellido}</td>
+                                            <td class="invert">${objData[i].telefono}</td>
+                                            <td class="invert">${objData[i].email}</td>
+                                            <td class="invert">${objData[i].dni}</td>
+                                            <td class="invert">
+                                                ${button}
+                                            </td>
+                                        </tr>`;
+                        }
+                        index.get('text-registros').innerHTML = objData.length+' clientes.';
+                        index.get('tabla-usuarios').innerHTML = html;
+                    }else{
+                        index.msjError('¡Ocurrio un error al cargar los datos!');
+                    }
+                }
+            }
+        },
+        activarUsuario(elm){
+            this.usuario = {};
+            var idpersona = $(elm).attr('user');
+            let data = this.list.find(function(element) {
+                return element.idpersona == idpersona;
+            });
+            let this_ = this;
+            Swal.fire({
+                title: '¿Seguro que desea '+(data.estado ? 'desactivar' : 'activar')+' a '+data.nombre+' '+data.apellido+'?',
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#B3ABAB',
+                confirmButtonText: 'SI',
+                cancelButtonText: 'NO'
+            }).then((result) => {
+                if (result.value) {
+                    var request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+                    var ajaxUrl = base_url+'/usuarios/desactivarUsuario';
+                    var formData = new FormData(); // objeto ya declarado para ajax sentencia creada por
+                    formData.append("idpersona", idpersona);
+                    formData.append("estado", (data.estado == '1' ? 0 : 1));
+                    
+                    request.open("POST", ajaxUrl, true);
+                    request.send(formData);
+                    request.onreadystatechange = function(){
+                        if(request.readyState == 4 && request.status == 200){
+                            //console.log(request.responseText);
+                            var objData = JSON.parse(request.responseText);
+                            if(objData.estado){
+                                this_.getClientes();
+                                index.msjCompletado(objData.msj);
+                            }else{
+                                index.msjError(objData.msj);
+                            }
+                        }
+                    }
+                }
+            }); 
+        }
+     };
+     return metodos;
+ })(window, document);
+ clientes.inicio();
